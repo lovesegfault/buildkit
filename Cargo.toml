@@ -1,0 +1,9 @@
+[package]
+name = "buildkit"
+version = "0.1.0"
+edition = "2021"
+license = "BSD-3-Clause"
+repository = "https://github.com/lovesegfault/buildkit"
+description = "Build.rs toolkit for -sys crates"
+
+[dependencies]
