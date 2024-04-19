@@ -5,5 +5,10 @@ edition = "2021"
 license = "BSD-3-Clause"
 repository = "https://github.com/lovesegfault/buildkit"
 description = "Build.rs toolkit for -sys crates"
+rust-version = "1.56.0"
 
 [dependencies]
+camino = "1.1.6"
+thiserror = "1.0.58"
+cargo_metadata = "0.18.1"
+serde = { version = "1.0.198", features = ["derive"] }

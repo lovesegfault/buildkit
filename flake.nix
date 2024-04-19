@@ -70,6 +70,7 @@
           nci = {
             projects.buildkit.path = ./.;
             crates.buildkit = { };
+            toolchainConfig = ./rust-toolchain.toml;
           };
 
           packages.default = buildkit.packages.release;
