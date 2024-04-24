@@ -152,6 +152,7 @@ enum ErrorKind {
 // This will represent the data that folks can specify within their Cargo.toml
 // libgit2: name + version range for pkg-config
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct BuildKitMetadata {
     pkg_config: Option<PkgConfigRequirement>,
     vcpkg: Option<VcPkgRequirement>,
@@ -160,6 +161,7 @@ struct BuildKitMetadata {
 }
 
 #[derive(Deserialize, Clone, Copy)]
+#[serde(rename_all = "kebab-case")]
 enum BuildKitMode {
     PkgConfig,
     VcPkg,
@@ -167,12 +169,15 @@ enum BuildKitMode {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct PkgConfigRequirement {
     name: String,
     version_req: Option<PkgConfigVersionReq>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+#[serde(rename_all_fields = "kebab-case")]
 enum PkgConfigVersionReq {
     Range { min: String, max: String },
     Min(String),
@@ -181,18 +186,22 @@ enum PkgConfigVersionReq {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct VcPkgRequirement {
     name: String,
     libs: Vec<VcPkgLibName>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct VcPkgLibName {
     lib_name: String,
     dll_name: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+#[serde(rename_all_fields = "kebab-case")]
 enum VendoredSource {
     RemoteTarball {
         url: String,
