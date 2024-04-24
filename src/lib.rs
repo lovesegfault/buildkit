@@ -5,7 +5,7 @@ use cargo_metadata::MetadataCommand;
 use serde::Deserialize;
 
 // This will be the builder pattern thing that people interact with in their build.rs
-struct BuildKit {
+pub struct BuildKit {
     metadata: BuildKitMetadata,
 }
 
@@ -39,7 +39,7 @@ impl BuildKit {
         Ok(BuildKit { metadata })
     }
 
-    fn build<F>(&self, try_vendor: F) -> Result<(), Error>
+    pub fn build<F>(&self, try_vendor: F) -> Result<(), Error>
     where
         F: Fn(VendoredBuildContext) -> Result<(), Error>,
     {
@@ -205,18 +205,22 @@ pub struct VendoredBuildContext {
 }
 
 impl VendoredBuildContext {
-    // TODO
     fn new(source: &VendoredSource) -> VendoredBuildContext {
         VendoredBuildContext {
             source_path: Utf8PathBuf::new(),
         }
     }
+
+    /// Gets the path to the downloaded source.
+    pub fn source_path(&self) -> &Utf8PathBuf {
+        &self.source_path
+    }
 }
 
-fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), ConfigurationError> {
+fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), Error> {
     todo!()
 }
 
-fn try_pkg_config(req: &PkgConfigRequirement) -> Result<(), ConfigurationError> {
+fn try_pkg_config(req: &PkgConfigRequirement) -> Result<(), Error> {
     todo!()
 }
