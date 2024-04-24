@@ -213,10 +213,10 @@ impl VendoredBuildContext {
     }
 }
 
-fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), ConfigurationError> {
+fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), Error> {
     todo!()
 }
 
-fn try_pkg_config(req: &PkgConfigRequirement) -> Result<(), ConfigurationError> {
+fn try_pkg_config(req: &PkgConfigRequirement) -> Result<(), Error> {
     todo!()
 }
