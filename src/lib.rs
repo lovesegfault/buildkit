@@ -74,7 +74,7 @@ impl BuildKit {
                     .ok_or_else(|| ErrorKind::NoPkgConfigRequirementSpecified)?;
                 try_pkg_config(req)
             }
-            BuildKitMode::VcPkg => {
+            BuildKitMode::Vcpkg => {
                 let req = self
                     .metadata
                     .vcpkg
@@ -100,7 +100,7 @@ impl BuildKit {
         // curl-sys falls back to pkg_config when vcpkg failed.
         // https://github.com/alexcrichton/curl-rust/blob/c01261310f13c85dc70d4e8a1ef87504662a1154/curl-sys/build.rs#L30-L37
         if target.ends_with("-windows-msvc") {
-            Ok(BuildKitMode::VcPkg)
+            Ok(BuildKitMode::Vcpkg)
         } else {
             Ok(BuildKitMode::PkgConfig)
         }
@@ -155,7 +155,7 @@ enum ErrorKind {
 #[serde(rename_all = "kebab-case")]
 struct BuildKitMetadata {
     pkg_config: Option<PkgConfigRequirement>,
-    vcpkg: Option<VcPkgRequirement>,
+    vcpkg: Option<VcpkgRequirement>,
     vendored_source: Option<VendoredSource>,
     default_mode: BuildKitMode,
 }
@@ -164,7 +164,7 @@ struct BuildKitMetadata {
 #[serde(rename_all = "kebab-case")]
 enum BuildKitMode {
     PkgConfig,
-    VcPkg,
+    Vcpkg,
     VendoredBuild,
 }
 
@@ -187,14 +187,14 @@ enum PkgConfigVersionReq {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
-struct VcPkgRequirement {
+struct VcpkgRequirement {
     name: String,
-    libs: Vec<VcPkgLibName>,
+    libs: Vec<VcpkgLibName>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case")]
-struct VcPkgLibName {
+struct VcpkgLibName {
     lib_name: String,
     dll_name: String,
 }
@@ -247,7 +247,7 @@ impl VendoredBuildContext {
 /// it appears that this crate doesn't really call into the [`vcpkg` from Microsoft][ms-vcpkg].
 ///
 /// [ms-vcpkg]: https://github.com/microsoft/vcpkg
-fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), Error> {
+fn try_vcpkg(req: &VcpkgRequirement) -> Result<(), Error> {
     todo!()
 }
 
