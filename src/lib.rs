@@ -118,16 +118,3 @@ enum VendoredSource {
         path: Utf8PathBuf,
     },
 }
-
-// |ctx: VendoredBuildContext| -> Result<(), BuildFailure>
-// struct VendoredBuildContext {
-//     source_path: Utf8PathBuf,
-// }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {}
-}
