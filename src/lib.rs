@@ -40,6 +40,58 @@ impl BuildKit {
 
         Ok(BuildKit { metadata })
     }
+
+    fn build<F>(&self, try_vendor: F) -> Result<(), ConfigurationError>
+    where
+        F: Fn(VendoredBuildContext) -> Result<(), ConfigurationError>,
+    {
+        match self.mode()? {
+            BuildKitMode::VendoredBuild => {
+                let vendored_source = self
+                    .metadata
+                    .vendored_source
+                    .as_ref()
+                    .ok_or_else(|| ConfigurationError::NoVendoredSourceSpecified)?;
+                let ctx = VendoredBuildContext::new(vendored_source);
+                try_vendor(ctx)
+            }
+            BuildKitMode::PkgConfig => {
+                let req = self
+                    .metadata
+                    .pkg_config
+                    .as_ref()
+                    .ok_or_else(|| ConfigurationError::NoPkgConfigRequirementSpecified)?;
+                try_pkg_config(req)
+            }
+            BuildKitMode::VcPkg => {
+                let req = self
+                    .metadata
+                    .vcpkg
+                    .as_ref()
+                    .ok_or_else(|| ConfigurationError::NoVcpkgRequirementSpecified)?;
+                try_vcpkg(req)
+            }
+        }
+    }
+
+    // TODO: ways for external build systems to override
+    fn mode(&self) -> Result<BuildKitMode, ConfigurationError> {
+        if matches!(self.metadata.default_mode, BuildKitMode::VendoredBuild) {
+            return Ok(BuildKitMode::VendoredBuild);
+        }
+        let target = std::env::var("TARGET").map_err(|e| ConfigurationError::NoTargetInEnv(e))?;
+        // TODO: should we relax it to `-windows-`?
+        // Some people seems to use vcpkg with mingw: https://www.reddit.com/r/cpp/comments/p1655e/comment/h8bly7v
+        //
+        // TODO: should we retry if vcpkg found nothing?
+        // curl-sys falls back to pkg_config when vcpkg failed.
+        // https://github.com/alexcrichton/curl-rust/blob/c01261310f13c85dc70d4e8a1ef87504662a1154/curl-sys/build.rs#L30-L37
+        if target.ends_with("-windows-msvc") {
+            Ok(BuildKitMode::VcPkg)
+        } else {
+            Ok(BuildKitMode::PkgConfig)
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -52,6 +104,18 @@ enum ConfigurationError {
     InvalidCargoMetadata(String),
     #[error("Failed to deserialize `package.metadata.buildkit`")]
     Json(#[from] serde_json::Error),
+    #[error("vendored mode is set but no vendored source specified")]
+    NoVendoredSourceSpecified,
+    #[error("pkg-config mode is set but no pkg-config requirement specified")]
+    NoPkgConfigRequirementSpecified,
+    #[error("vcpkg mode is set but no vcpkg requirement specified")]
+    NoVcpkgRequirementSpecified,
+    #[error("Did not find $TARGET in env")]
+    NoTargetInEnv(#[source] std::env::VarError),
+    #[error("vcpkg failed to probe")]
+    VcpkgError(#[from] vcpkg::Error),
+    #[error("pkg-config failed to probe")]
+    PkgConfigError(#[from] pkg_config::Error),
 }
 
 // This will represent the data that folks can specify within their Cargo.toml
@@ -64,7 +128,7 @@ struct BuildKitMetadata {
     default_mode: BuildKitMode,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 enum BuildKitMode {
     PkgConfig,
     VcPkg,
@@ -119,15 +183,24 @@ enum VendoredSource {
     },
 }
 
-// |ctx: VendoredBuildContext| -> Result<(), BuildFailure>
-// struct VendoredBuildContext {
-//     source_path: Utf8PathBuf,
-// }
+#[derive(Debug)]
+pub struct VendoredBuildContext {
+    source_path: Utf8PathBuf,
+}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl VendoredBuildContext {
+    // TODO
+    fn new(source: &VendoredSource) -> VendoredBuildContext {
+        VendoredBuildContext {
+            source_path: Utf8PathBuf::new(),
+        }
+    }
+}
 
-    #[test]
-    fn it_works() {}
+fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), ConfigurationError> {
+    todo!()
+}
+
+fn try_pkg_config(req: &PkgConfigRequirement) -> Result<(), ConfigurationError> {
+    todo!()
 }
