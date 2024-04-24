@@ -15,12 +15,30 @@ impl BuildKit {
             Ok(path) => Utf8PathBuf::from(path),
             Err(e) => return Err(ConfigurationError::NoCargoManifestDirInEnv(e)),
         };
+        let manifest_path = manifest_dir.join("Cargo.toml");
         let metadata = MetadataCommand::new()
-            .manifest_path(manifest_dir.join("Cargo.toml"))
+            .manifest_path(&manifest_path)
             .exec()
             .map_err(ConfigurationError::CargoMetadataError)?;
 
-        todo!()
+        let root_package = {
+            let root_id = metadata
+                .resolve
+                .and_then(|r| r.root)
+                .ok_or_else(|| ConfigurationError::InvalidCargoMetadata("resolve.root".into()))?;
+            metadata
+                .packages
+                .into_iter()
+                .find(|pkg| pkg.id == root_id)
+                .ok_or_else(|| {
+                    ConfigurationError::InvalidCargoMetadata(format!(
+                        r#"packages.id = "{root_id}""#
+                    ))
+                })?
+        };
+        let metadata: BuildKitMetadata = serde_json::from_value(root_package.metadata)?;
+
+        Ok(BuildKit { metadata })
     }
 }
 
@@ -30,6 +48,10 @@ enum ConfigurationError {
     CargoMetadataError(#[from] cargo_metadata::Error),
     #[error("Did not find $CARGO_MANIFEST_DIR in env")]
     NoCargoManifestDirInEnv(#[source] std::env::VarError),
+    #[error("Failed to find `{0}` in cargo metadata output")]
+    InvalidCargoMetadata(String),
+    #[error("Failed to deserialize `package.metadata.buildkit`")]
+    Json(#[from] serde_json::Error),
 }
 
 // This will represent the data that folks can specify within their Cargo.toml
