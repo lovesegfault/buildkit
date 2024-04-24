@@ -74,7 +74,7 @@ impl BuildKit {
                     .ok_or_else(|| ErrorKind::NoPkgConfigRequirementSpecified)?;
                 try_pkg_config(req)
             }
-            BuildKitMode::VcPkg => {
+            BuildKitMode::Vcpkg => {
                 let req = self
                     .metadata
                     .vcpkg
@@ -100,7 +100,7 @@ impl BuildKit {
         // curl-sys falls back to pkg_config when vcpkg failed.
         // https://github.com/alexcrichton/curl-rust/blob/c01261310f13c85dc70d4e8a1ef87504662a1154/curl-sys/build.rs#L30-L37
         if target.ends_with("-windows-msvc") {
-            Ok(BuildKitMode::VcPkg)
+            Ok(BuildKitMode::Vcpkg)
         } else {
             Ok(BuildKitMode::PkgConfig)
         }
@@ -127,24 +127,34 @@ impl Error {
 enum ErrorKind {
     #[error("Failed to parse cargo metadata")]
     CargoMetadataError(#[from] cargo_metadata::Error),
+
     #[error("Did not find $CARGO_MANIFEST_DIR in env")]
     NoCargoManifestDirInEnv(#[source] std::env::VarError),
+
     #[error("Failed to find `{0}` in cargo metadata output")]
     InvalidCargoMetadata(String),
+
     #[error("Failed to deserialize `package.metadata.buildkit`")]
     Json(#[from] serde_json::Error),
+
     #[error("vendored mode is set but no vendored source specified")]
     NoVendoredSourceSpecified,
+
     #[error("pkg-config mode is set but no pkg-config requirement specified")]
     NoPkgConfigRequirementSpecified,
+
     #[error("vcpkg mode is set but no vcpkg requirement specified")]
     NoVcpkgRequirementSpecified,
+
     #[error("Did not find $TARGET in env")]
     NoTargetInEnv(#[source] std::env::VarError),
+
     #[error("vcpkg failed to probe")]
     VcpkgError(#[from] vcpkg::Error),
+
     #[error("pkg-config failed to probe")]
     PkgConfigError(#[from] pkg_config::Error),
+
     #[error(transparent)]
     Custom(Box<dyn std::error::Error>),
 }
@@ -152,27 +162,32 @@ enum ErrorKind {
 // This will represent the data that folks can specify within their Cargo.toml
 // libgit2: name + version range for pkg-config
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct BuildKitMetadata {
     pkg_config: Option<PkgConfigRequirement>,
-    vcpkg: Option<VcPkgRequirement>,
+    vcpkg: Option<VcpkgRequirement>,
     vendored_source: Option<VendoredSource>,
     default_mode: BuildKitMode,
 }
 
 #[derive(Deserialize, Clone, Copy)]
+#[serde(rename_all = "kebab-case")]
 enum BuildKitMode {
     PkgConfig,
-    VcPkg,
+    Vcpkg,
     VendoredBuild,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct PkgConfigRequirement {
     name: String,
     version_req: Option<PkgConfigVersionReq>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+#[serde(rename_all_fields = "kebab-case")]
 enum PkgConfigVersionReq {
     Range { min: String, max: String },
     Min(String),
@@ -181,18 +196,22 @@ enum PkgConfigVersionReq {
 }
 
 #[derive(Deserialize)]
-struct VcPkgRequirement {
+#[serde(rename_all = "kebab-case")]
+struct VcpkgRequirement {
     name: String,
-    libs: Vec<VcPkgLibName>,
+    libs: Vec<VcpkgLibName>,
 }
 
 #[derive(Deserialize)]
-struct VcPkgLibName {
+#[serde(rename_all = "kebab-case")]
+struct VcpkgLibName {
     lib_name: String,
     dll_name: String,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+#[serde(rename_all_fields = "kebab-case")]
 enum VendoredSource {
     RemoteTarball {
         url: String,
@@ -238,7 +257,7 @@ impl VendoredBuildContext {
 /// it appears that this crate doesn't really call into the [`vcpkg` from Microsoft][ms-vcpkg].
 ///
 /// [ms-vcpkg]: https://github.com/microsoft/vcpkg
-fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), Error> {
+fn try_vcpkg(req: &VcpkgRequirement) -> Result<(), Error> {
     todo!()
 }
 
