@@ -97,6 +97,15 @@ impl BuildKit {
 #[error(transparent)]
 pub struct Error(#[from] ErrorKind);
 
+impl Error {
+    /// Creates a custom error.
+    ///
+    /// This is useful during a vendor build and you want to return your own error.
+    pub fn custom(err: Box<dyn std::error::Error>) -> Error {
+        ErrorKind::Custom(err).into()
+    }
+}
+
 /// Non-public error kind for [`Error`].
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
@@ -121,6 +130,8 @@ enum ErrorKind {
     VcpkgError(#[from] vcpkg::Error),
     #[error("pkg-config failed to probe")]
     PkgConfigError(#[from] pkg_config::Error),
+    #[error(transparent)]
+    Custom(Box<dyn std::error::Error>),
 }
 
 // This will represent the data that folks can specify within their Cargo.toml
