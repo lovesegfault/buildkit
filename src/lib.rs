@@ -127,24 +127,34 @@ impl Error {
 enum ErrorKind {
     #[error("Failed to parse cargo metadata")]
     CargoMetadataError(#[from] cargo_metadata::Error),
+
     #[error("Did not find $CARGO_MANIFEST_DIR in env")]
     NoCargoManifestDirInEnv(#[source] std::env::VarError),
+
     #[error("Failed to find `{0}` in cargo metadata output")]
     InvalidCargoMetadata(String),
+
     #[error("Failed to deserialize `package.metadata.buildkit`")]
     Json(#[from] serde_json::Error),
+
     #[error("vendored mode is set but no vendored source specified")]
     NoVendoredSourceSpecified,
+
     #[error("pkg-config mode is set but no pkg-config requirement specified")]
     NoPkgConfigRequirementSpecified,
+
     #[error("vcpkg mode is set but no vcpkg requirement specified")]
     NoVcpkgRequirementSpecified,
+
     #[error("Did not find $TARGET in env")]
     NoTargetInEnv(#[source] std::env::VarError),
+
     #[error("vcpkg failed to probe")]
     VcpkgError(#[from] vcpkg::Error),
+
     #[error("pkg-config failed to probe")]
     PkgConfigError(#[from] pkg_config::Error),
+
     #[error(transparent)]
     Custom(Box<dyn std::error::Error>),
 }
