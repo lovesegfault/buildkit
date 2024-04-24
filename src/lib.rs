@@ -10,40 +10,38 @@ struct BuildKit {
 }
 
 impl BuildKit {
-    pub fn from_metadata() -> Result<Self, ConfigurationError> {
+    pub fn from_metadata() -> Result<Self, Error> {
         let manifest_dir = match std::env::var("CARGO_MANIFEST_DIR") {
             Ok(path) => Utf8PathBuf::from(path),
-            Err(e) => return Err(ConfigurationError::NoCargoManifestDirInEnv(e)),
+            Err(e) => return Err(ErrorKind::NoCargoManifestDirInEnv(e).into()),
         };
         let manifest_path = manifest_dir.join("Cargo.toml");
         let metadata = MetadataCommand::new()
             .manifest_path(&manifest_path)
             .exec()
-            .map_err(ConfigurationError::CargoMetadataError)?;
+            .map_err(ErrorKind::CargoMetadataError)?;
 
         let root_package = {
             let root_id = metadata
                 .resolve
                 .and_then(|r| r.root)
-                .ok_or_else(|| ConfigurationError::InvalidCargoMetadata("resolve.root".into()))?;
+                .ok_or_else(|| ErrorKind::InvalidCargoMetadata("resolve.root".into()))?;
             metadata
                 .packages
                 .into_iter()
                 .find(|pkg| pkg.id == root_id)
                 .ok_or_else(|| {
-                    ConfigurationError::InvalidCargoMetadata(format!(
-                        r#"packages.id = "{root_id}""#
-                    ))
+                    ErrorKind::InvalidCargoMetadata(format!(r#"packages.id = "{root_id}""#))
                 })?
         };
-        let metadata: BuildKitMetadata = serde_json::from_value(root_package.metadata)?;
+        let metadata = serde_json::from_value(root_package.metadata).map_err(ErrorKind::Json)?;
 
         Ok(BuildKit { metadata })
     }
 
-    fn build<F>(&self, try_vendor: F) -> Result<(), ConfigurationError>
+    fn build<F>(&self, try_vendor: F) -> Result<(), Error>
     where
-        F: Fn(VendoredBuildContext) -> Result<(), ConfigurationError>,
+        F: Fn(VendoredBuildContext) -> Result<(), Error>,
     {
         match self.mode()? {
             BuildKitMode::VendoredBuild => {
@@ -51,7 +49,7 @@ impl BuildKit {
                     .metadata
                     .vendored_source
                     .as_ref()
-                    .ok_or_else(|| ConfigurationError::NoVendoredSourceSpecified)?;
+                    .ok_or_else(|| ErrorKind::NoVendoredSourceSpecified)?;
                 let ctx = VendoredBuildContext::new(vendored_source);
                 try_vendor(ctx)
             }
@@ -60,7 +58,7 @@ impl BuildKit {
                     .metadata
                     .pkg_config
                     .as_ref()
-                    .ok_or_else(|| ConfigurationError::NoPkgConfigRequirementSpecified)?;
+                    .ok_or_else(|| ErrorKind::NoPkgConfigRequirementSpecified)?;
                 try_pkg_config(req)
             }
             BuildKitMode::VcPkg => {
@@ -68,18 +66,18 @@ impl BuildKit {
                     .metadata
                     .vcpkg
                     .as_ref()
-                    .ok_or_else(|| ConfigurationError::NoVcpkgRequirementSpecified)?;
+                    .ok_or_else(|| ErrorKind::NoVcpkgRequirementSpecified)?;
                 try_vcpkg(req)
             }
         }
     }
 
     // TODO: ways for external build systems to override
-    fn mode(&self) -> Result<BuildKitMode, ConfigurationError> {
+    fn mode(&self) -> Result<BuildKitMode, Error> {
         if matches!(self.metadata.default_mode, BuildKitMode::VendoredBuild) {
             return Ok(BuildKitMode::VendoredBuild);
         }
-        let target = std::env::var("TARGET").map_err(|e| ConfigurationError::NoTargetInEnv(e))?;
+        let target = std::env::var("TARGET").map_err(|e| ErrorKind::NoTargetInEnv(e))?;
         // TODO: should we relax it to `-windows-`?
         // Some people seems to use vcpkg with mingw: https://www.reddit.com/r/cpp/comments/p1655e/comment/h8bly7v
         //
@@ -94,8 +92,24 @@ impl BuildKit {
     }
 }
 
+/// Represents possible errors that can occur when build libraries
 #[derive(Debug, thiserror::Error)]
-enum ConfigurationError {
+#[error(transparent)]
+pub struct Error(#[from] ErrorKind);
+
+impl Error {
+    /// Creates a custom error.
+    ///
+    /// This is useful during a vendor build and you want to return your own error.
+    pub fn custom(err: Box<dyn std::error::Error>) -> Error {
+        ErrorKind::Custom(err).into()
+    }
+}
+
+/// Non-public error kind for [`Error`].
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+enum ErrorKind {
     #[error("Failed to parse cargo metadata")]
     CargoMetadataError(#[from] cargo_metadata::Error),
     #[error("Did not find $CARGO_MANIFEST_DIR in env")]
@@ -116,6 +130,8 @@ enum ConfigurationError {
     VcpkgError(#[from] vcpkg::Error),
     #[error("pkg-config failed to probe")]
     PkgConfigError(#[from] pkg_config::Error),
+    #[error(transparent)]
+    Custom(Box<dyn std::error::Error>),
 }
 
 // This will represent the data that folks can specify within their Cargo.toml
