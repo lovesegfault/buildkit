@@ -9,6 +9,7 @@ dependencies = [
  "camino",
  "cargo_metadata",
  "serde",
+ "serde_json",
  "thiserror",
 ]
 
