@@ -13,3 +13,5 @@ thiserror = "1.0.58"
 cargo_metadata = "0.18.1"
 serde = { version = "1.0.198", features = ["derive"] }
 serde_json = "1.0.116"
+pkg-config = "0.3.30"
+vcpkg = "0.2.15"
