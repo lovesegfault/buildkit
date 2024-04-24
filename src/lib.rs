@@ -1,15 +1,24 @@
-// WINDOWS SUPPORT OMG
+//! Put some fancy documentation here.
+//!
+//! ```toml
+//! [package.metadata.buildkit]
+//! vendored-source = "..."
+//! pkg-config = "..."
+//! vcpkg = "..."
+//! ```
 
 use camino::Utf8PathBuf;
 use cargo_metadata::MetadataCommand;
 use serde::Deserialize;
 
-// This will be the builder pattern thing that people interact with in their build.rs
+/// This will be the builder pattern thing that people interact with in their build.rs
 pub struct BuildKit {
     metadata: BuildKitMetadata,
 }
 
 impl BuildKit {
+    /// Collects information from the `package.metadata.buildkit`
+    /// section of the Cargo.toml file for the package being built.
     pub fn from_metadata() -> Result<Self, Error> {
         let manifest_dir = match std::env::var("CARGO_MANIFEST_DIR") {
             Ok(path) => Utf8PathBuf::from(path),
@@ -39,6 +48,10 @@ impl BuildKit {
         Ok(BuildKit { metadata })
     }
 
+    /// Builds the library.
+    ///
+    /// The `try_vendor` closure is for building from vendoered source
+    /// if the `package.metadata.buildkit.vendored-source` section is specified.
     pub fn build<F>(&self, try_vendor: F) -> Result<(), Error>
     where
         F: Fn(VendoredBuildContext) -> Result<(), Error>,
@@ -72,7 +85,9 @@ impl BuildKit {
         }
     }
 
-    // TODO: ways for external build systems to override
+    /// Gets the mode we're going to build in.
+    ///
+    /// TODO: ways for external build systems to override
     fn mode(&self) -> Result<BuildKitMode, Error> {
         if matches!(self.metadata.default_mode, BuildKitMode::VendoredBuild) {
             return Ok(BuildKitMode::VendoredBuild);
@@ -151,7 +166,6 @@ enum BuildKitMode {
     VendoredBuild,
 }
 
-// TODO: Rename
 #[derive(Deserialize)]
 struct PkgConfigRequirement {
     name: String,
@@ -199,6 +213,7 @@ enum VendoredSource {
     },
 }
 
+/// Provides the information needed for build a library from a vendred source.
 #[derive(Debug)]
 pub struct VendoredBuildContext {
     source_path: Utf8PathBuf,
@@ -211,16 +226,23 @@ impl VendoredBuildContext {
         }
     }
 
-    /// Gets the path to the downloaded source.
+    /// Gets the local path to the vendored source.
     pub fn source_path(&self) -> &Utf8PathBuf {
         &self.source_path
     }
 }
 
+/// Probes system libraries via the [`vcpkg`] crate.
+///
+/// As of `vcpkg@0.2.15`,
+/// it appears that this crate doesn't really call into the [`vcpkg` from Microsoft][ms-vcpkg].
+///
+/// [ms-vcpkg]: https://github.com/microsoft/vcpkg
 fn try_vcpkg(req: &VcPkgRequirement) -> Result<(), Error> {
     todo!()
 }
 
+/// Probe system libraries via the [`pkg-config`] crate.
 fn try_pkg_config(req: &PkgConfigRequirement) -> Result<(), Error> {
     todo!()
 }
