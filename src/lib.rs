@@ -161,7 +161,7 @@ enum ErrorKind {
 
 // This will represent the data that folks can specify within their Cargo.toml
 // libgit2: name + version range for pkg-config
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct BuildKitMetadata {
     pkg_config: Option<PkgConfigRequirement>,
@@ -170,7 +170,7 @@ struct BuildKitMetadata {
     default_mode: BuildKitMode,
 }
 
-#[derive(Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 #[serde(rename_all = "kebab-case")]
 enum BuildKitMode {
     PkgConfig,
@@ -178,14 +178,14 @@ enum BuildKitMode {
     VendoredBuild,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct PkgConfigRequirement {
     name: String,
     version_req: Option<PkgConfigVersionReq>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(rename_all_fields = "kebab-case")]
 enum PkgConfigVersionReq {
@@ -195,21 +195,21 @@ enum PkgConfigVersionReq {
     Exact(String),
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct VcpkgRequirement {
     name: String,
     libs: Vec<VcpkgLibName>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct VcpkgLibName {
     lib_name: String,
     dll_name: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(rename_all_fields = "kebab-case")]
 enum VendoredSource {
