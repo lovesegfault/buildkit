@@ -185,6 +185,9 @@ enum BuildKitMode {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct PkgConfigRequirement {
+    /// Library to probe. The value will be verbatimly passed to `pkg-config`.
+    ///
+    /// For example, libcurl will be `libcurl`.
     name: String,
     version_req: Option<PkgConfigVersionReq>,
 }
@@ -192,11 +195,16 @@ struct PkgConfigRequirement {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[serde(rename_all_fields = "kebab-case")]
+#[serde(untagged)]
 enum PkgConfigVersionReq {
+    /// `[min..max)` (or `min..max` in Rust notation).
     Range { min: String, max: String },
-    Min(String),
-    Max(String),
-    Exact(String),
+    /// At least the given version.
+    Min { min: String },
+    /// At no newer than the given version.
+    Max { max: String },
+    /// At exactly the given version.
+    Exact { exact: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -265,7 +273,37 @@ fn try_vcpkg(req: &VcpkgRequirement) -> Result<(), Error> {
     todo!()
 }
 
-/// Probe system libraries via the [`pkg-config`] crate.
+/// Probes system libraries via the [`pkg-config`] crate.
 fn try_pkg_config(req: &PkgConfigRequirement) -> Result<(), Error> {
-    todo!()
+    let name = req.name.as_str();
+    emit_no_vendor(name);
+    let mut config = pkg_config::Config::new();
+
+    if let Some(version_req) = &req.version_req {
+        match version_req {
+            PkgConfigVersionReq::Range { min, max } => {
+                config.range_version(min.as_str()..max.as_str());
+            }
+            PkgConfigVersionReq::Min { min } => {
+                config.range_version(min.as_str()..);
+            }
+            PkgConfigVersionReq::Max { max } => {
+                config.range_version(..=max.as_str());
+            }
+            PkgConfigVersionReq::Exact { exact } => {
+                config.exactly_version(&exact);
+            }
+        }
+    }
+
+    let lib = config.probe(&req.name).map_err(ErrorKind::PkgConfigError)?;
+    for include in &lib.include_paths {
+        println!("cargo:include={}", include.display());
+    }
+    Ok(())
+}
+
+fn emit_no_vendor(lib_name: &str) {
+    let normalized_name = lib_name.to_uppercase().replace("-", "_");
+    println!("cargo:rerun-if-env-changed={normalized_name}_NO_VENDOR");
 }
