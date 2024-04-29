@@ -43,8 +43,12 @@ impl BuildKit {
                     ErrorKind::InvalidCargoMetadata(format!(r#"packages.id = "{root_id}""#))
                 })?
         };
-        let metadata = serde_json::from_value(root_package.metadata).map_err(ErrorKind::Json)?;
-
+        let value = root_package
+            .metadata
+            .get("buildkit")
+            .ok_or_else(|| ErrorKind::InvalidCargoMetadata(format!("package.metadata.buildkit")))?
+            .clone();
+        let metadata = serde_json::from_value(value).map_err(ErrorKind::Json)?;
         Ok(BuildKit { metadata })
     }
 
