@@ -125,16 +125,16 @@ impl Error {
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
 enum ErrorKind {
-    #[error("Failed to parse cargo metadata")]
+    #[error("Failed to parse cargo metadata: {0}")]
     CargoMetadataError(#[from] cargo_metadata::Error),
 
-    #[error("Did not find $CARGO_MANIFEST_DIR in env")]
+    #[error("Did not find $CARGO_MANIFEST_DIR in env: {0}")]
     NoCargoManifestDirInEnv(#[source] std::env::VarError),
 
     #[error("Failed to find `{0}` in cargo metadata output")]
     InvalidCargoMetadata(String),
 
-    #[error("Failed to deserialize `package.metadata.buildkit`")]
+    #[error("Failed to deserialize `package.metadata.buildkit`: {0}")]
     Json(#[from] serde_json::Error),
 
     #[error("vendored mode is set but no vendored source specified")]
@@ -146,13 +146,13 @@ enum ErrorKind {
     #[error("vcpkg mode is set but no vcpkg requirement specified")]
     NoVcpkgRequirementSpecified,
 
-    #[error("Did not find $TARGET in env")]
+    #[error("Did not find $TARGET in env: {0}")]
     NoTargetInEnv(#[source] std::env::VarError),
 
-    #[error("vcpkg failed to probe")]
+    #[error("vcpkg failed to probe: {0}")]
     VcpkgError(#[from] vcpkg::Error),
 
-    #[error("pkg-config failed to probe")]
+    #[error("pkg-config failed to probe: {0}")]
     PkgConfigError(#[from] pkg_config::Error),
 
     #[error(transparent)]
