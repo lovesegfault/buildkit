@@ -24,26 +24,26 @@ impl BuildKit {
         let manifest_path = manifest_dir.join("Cargo.toml");
         let metadata = MetadataCommand::new()
             .manifest_path(&manifest_path)
+            .no_deps()
             .exec()
             .map_err(ErrorKind::CargoMetadataError)?;
 
-        let root_package = {
-            let root_id = metadata
-                .resolve
-                .and_then(|r| r.root)
-                .ok_or_else(|| ErrorKind::InvalidCargoMetadata("resolve.root".into()))?;
-            metadata
-                .packages
-                .into_iter()
-                .find(|pkg| pkg.id == root_id)
-                .ok_or_else(|| {
-                    ErrorKind::InvalidCargoMetadata(format!(r#"packages.id = "{root_id}""#))
-                })?
-        };
-        let value = root_package
+        let name = env_var("CARGO_PKG_NAME")?;
+        let version = env_var("CARGO_PKG_VERSION")?;
+        let package = metadata
+            .packages
+            .iter()
+            .filter(|p| p.name == name && p.version.to_string() == version)
+            .next()
+            .ok_or_else(|| {
+                ErrorKind::InvalidCargoMetadata(format!("package info from {name}@{version}"))
+            })?;
+        let value = package
             .metadata
             .get("buildkit")
-            .ok_or_else(|| ErrorKind::InvalidCargoMetadata(format!("package.metadata.buildkit")))?
+            .ok_or_else(|| {
+                ErrorKind::InvalidCargoMetadata(format!("metadata.buildkit for {name}@{version}"))
+            })?
             .clone();
         let metadata = serde_json::from_value(value).map_err(ErrorKind::Json)?;
         Ok(BuildKit { metadata })
@@ -133,7 +133,7 @@ enum ErrorKind {
     #[error("Failed to parse cargo metadata: {0}")]
     CargoMetadataError(#[from] cargo_metadata::Error),
 
-    #[error("Failed to find `{0}` in cargo metadata output")]
+    #[error("Failed to find in cargo metadata output: {0}")]
     InvalidCargoMetadata(String),
 
     #[error("Failed to deserialize `package.metadata.buildkit`: {0}")]
