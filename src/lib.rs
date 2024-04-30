@@ -20,10 +20,7 @@ impl BuildKit {
     /// Collects information from the `package.metadata.buildkit`
     /// section of the Cargo.toml file for the package being built.
     pub fn from_metadata() -> Result<Self, Error> {
-        let manifest_dir = match std::env::var("CARGO_MANIFEST_DIR") {
-            Ok(path) => Utf8PathBuf::from(path),
-            Err(e) => return Err(ErrorKind::NoCargoManifestDirInEnv(e).into()),
-        };
+        let manifest_dir = env_var("CARGO_MANIFEST_DIR").map(Utf8PathBuf::from)?;
         let manifest_path = manifest_dir.join("Cargo.toml");
         let metadata = MetadataCommand::new()
             .manifest_path(&manifest_path)
@@ -96,7 +93,7 @@ impl BuildKit {
         if matches!(self.metadata.default_mode, BuildKitMode::VendoredBuild) {
             return Ok(BuildKitMode::VendoredBuild);
         }
-        let target = std::env::var("TARGET").map_err(|e| ErrorKind::NoTargetInEnv(e))?;
+        let target = env_var("TARGET")?;
         // TODO: should we relax it to `-windows-`?
         // Some people seems to use vcpkg with mingw: https://www.reddit.com/r/cpp/comments/p1655e/comment/h8bly7v
         //
@@ -109,6 +106,10 @@ impl BuildKit {
             Ok(BuildKitMode::PkgConfig)
         }
     }
+}
+
+fn env_var(key: &'static str) -> Result<String, Error> {
+    std::env::var(key).map_err(|err| ErrorKind::EnvVarError { key, err }.into())
 }
 
 /// Represents possible errors that can occur when build libraries
@@ -132,9 +133,6 @@ enum ErrorKind {
     #[error("Failed to parse cargo metadata: {0}")]
     CargoMetadataError(#[from] cargo_metadata::Error),
 
-    #[error("Did not find $CARGO_MANIFEST_DIR in env: {0}")]
-    NoCargoManifestDirInEnv(#[source] std::env::VarError),
-
     #[error("Failed to find `{0}` in cargo metadata output")]
     InvalidCargoMetadata(String),
 
@@ -150,14 +148,18 @@ enum ErrorKind {
     #[error("vcpkg mode is set but no vcpkg requirement specified")]
     NoVcpkgRequirementSpecified,
 
-    #[error("Did not find $TARGET in env: {0}")]
-    NoTargetInEnv(#[source] std::env::VarError),
-
     #[error("vcpkg failed to probe: {0}")]
     VcpkgError(#[from] vcpkg::Error),
 
     #[error("pkg-config failed to probe: {0}")]
     PkgConfigError(#[from] pkg_config::Error),
+
+    #[error("Failed to get env var `{key}`: {err}")]
+    EnvVarError {
+        key: &'static str,
+        #[source]
+        err: std::env::VarError,
+    },
 
     #[error(transparent)]
     Custom(Box<dyn std::error::Error>),
