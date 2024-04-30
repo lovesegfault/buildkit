@@ -270,7 +270,15 @@ impl VendoredBuildContext {
 ///
 /// [ms-vcpkg]: https://github.com/microsoft/vcpkg
 fn try_vcpkg(req: &VcpkgRequirement) -> Result<(), Error> {
-    todo!()
+    let name = req.name.as_str();
+    emit_no_vendor(name);
+    let mut config = vcpkg::Config::new();
+    config.emit_includes(true);
+    for lib in &req.libs {
+        config.lib_names(&lib.lib_name, &lib.dll_name);
+    }
+    let _ = config.find_package(name).map_err(ErrorKind::VcpkgError)?;
+    Ok(())
 }
 
 /// Probes system libraries via the [`pkg-config`] crate.
