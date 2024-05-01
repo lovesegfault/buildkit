@@ -212,14 +212,21 @@ enum PkgConfigVersionReq {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct VcpkgRequirement {
+    /// If no overrides have been selected,
+    /// then the Vcpkg port name is the `<name>.lib` and the `<name>.dll`.
     name: String,
+    /// Override the name of the library to look for if it differs from the package name.
+    ///
+    /// See [`vcpkg::Config::lib_names`] for more.
     libs: Vec<VcpkgLibName>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 struct VcpkgLibName {
+    /// `<name>.lib`.
     lib_name: String,
+    /// `<name>.dll`.
     dll_name: String,
 }
 
